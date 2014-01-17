@@ -21,7 +21,7 @@ Example: <img src="createthumb.php?filename=photo.jpg&amp;width=100&amp;height=1
 */
 //	error_reporting(E_ALL);
 
-if (preg_match("/.jpg$|.jpeg$/i", $_GET['filename'])) header('Content-type: image/jpeg');
+/*if (preg_match("/.jpg$|.jpeg$/i", $_GET['filename'])) header('Content-type: image/jpeg');
 if (preg_match("/.gif$/i", $_GET['filename'])) header('Content-type: image/gif');
 if (preg_match("/.png$/i", $_GET['filename'])) header('Content-type: image/png');
 
@@ -86,7 +86,138 @@ if (preg_match("/.png$/i", $_GET['filename'])) header('Content-type: image/png')
          if (preg_match("/.gif$/i", $_GET['filename'])) ImageGIF($target,null,90);
          if (preg_match("/.png$/i", $_GET['filename'])) ImageJPEG($target,null,90); // Using ImageJPEG on purpose
          imagedestroy($target);
+*/
 
+$quality = 75;
+$maxsize = 1600;
 
+function genThumb($file, $outfile, $size = 120)
+{
+	//echo "genThumb : ".$file.",".$outfile."<br/>";
+	if(file_exists($outfile)) return;
+	// Define variables
+	$target = "";
+	$xoord = 0;
+	$yoord = 0;
+
+	$imgsize = GetImageSize($file);
+	$width = $imgsize[0];
+	$height = $imgsize[1];
+	if($width > $height)
+	{
+		// If the width is greater than the height it’s a horizontal picture
+		$xoord = ceil(($width-$height)/2);
+		$width = $height;      // Then we read a square frame that  equals the width
+	}
+	else
+	{
+		$yoord = ceil(($height-$width)/2);
+		$height = $width;
+	}
+
+    // Rotate JPG pictures
+    if(preg_match("/.jpg$|.jpeg$/i", $file))
+    {
+		if(function_exists('exif_read_data') && function_exists('imagerotate'))
+		{
+			$exif = exif_read_data($_GET['filename']);
+			$ort = $exif['IFD0']['Orientation'];
+			$degrees = 0;
+		    switch($ort)
+		    {
+		        case 6: // 90 rotate right
+		            $degrees = 270;
+		        break;
+		        case 8:    // 90 rotate left
+		            $degrees = 90;
+		        break;
+		    }
+			if($degrees != 0) $target = imagerotate($target, $degrees, 0);
+		}
+	}
+
+	global $quality;
+
+	$target = ImageCreatetruecolor($size, $size);
+	if(preg_match("/.jpg$/i", $file)) $source = ImageCreateFromJPEG($file);
+	if(preg_match("/.gif$/i", $file)) $source = ImageCreateFromGIF($file);
+	if(preg_match("/.png$/i", $file)) $source = ImageCreateFromPNG($file);
+	imagecopyresampled($target,$source,0,0,$xoord,$yoord,$size,$size,$width,$height);
+	imagedestroy($source);
+
+	if(preg_match("/.jpg$/i", $file)) $res = ImageJPEG($target, $outfile, $quality);
+	if(preg_match("/.gif$/i", $file)) $res = ImageGIF($target, $outfile, $quality);
+	if(preg_match("/.png$/i", $file)) $res = ImageJPEG($target, $outfile, $quality); // Using ImageJPEG on purpose
+	imagedestroy($target);
+	//echo "genThumb : ".$file.",".$outfile.", res : ".$res."<br/>";
+}
+
+function genMini($file, $outfile)
+{
+	//echo "genMini : ".$file.",".$outfile."<br/>";
+	//if(file_exists($outfile)) return;
+
+	// Define variables
+	$target = "";
+	$xoord = 0;
+	$yoord = 0;
+
+	$imgsize = GetImageSize($file);
+	$width = $imgsize[0];
+	$height = $imgsize[1];
+
+	$sizex = $width;
+	$sizey = $height;
+
+	global $maxsize;
+
+	$max = ($width > $height) ? $width : $height;
+	if($max > $maxsize)
+	{
+		$ratio = (float)$maxsize / $max;
+		$sizex *= $ratio;
+		$sizey *= $ratio;
+
+		//echo "genMini : ".$max.",".$maxsize."," . $ratio. ",".$sizex.",".$sizey."<br/>";
+
+	}
+	if(file_exists($outfile)) return;
+
+    // Rotate JPG pictures
+    /*if(preg_match("/.jpg$|.jpeg$/i", $file))
+    {
+		if(function_exists('exif_read_data') && function_exists('imagerotate'))
+		{
+			$exif = exif_read_data($_GET['filename']);
+			$ort = $exif['IFD0']['Orientation'];
+			$degrees = 0;
+		    switch($ort)
+		    {
+		        case 6: // 90 rotate right
+		            $degrees = 270;
+		        break;
+		        case 8:    // 90 rotate left
+		            $degrees = 90;
+		        break;
+		    }
+			if($degrees != 0)	$target = imagerotate($target, $degrees, 0);
+		}
+	}*/
+
+	global $quality;
+
+	$target = ImageCreatetruecolor($sizex, $sizey);
+	if(preg_match("/.jpg$/i", $file)) $source = ImageCreateFromJPEG($file);
+	if(preg_match("/.gif$/i", $file)) $source = ImageCreateFromGIF($file);
+	if(preg_match("/.png$/i", $file)) $source = ImageCreateFromPNG($file);
+	imagecopyresampled($target,$source,0,0,$xoord,$yoord,$sizex,$sizey,$width,$height);
+	imagedestroy($source);
+
+	if(preg_match("/.jpg$/i", $file)) $res = ImageJPEG($target, $outfile, $quality);
+	if(preg_match("/.gif$/i", $file)) $res = ImageGIF($target, $outfile, $quality);
+	if(preg_match("/.png$/i", $file)) $res = ImageJPEG($target, $outfile, $quality); // Using ImageJPEG on purpose
+	imagedestroy($target);
+	//echo "genMini : ".$file.",".$outfile.", res : ".$res."<br/>";
+}
 
 ?>
